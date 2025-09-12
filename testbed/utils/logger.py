@@ -14,6 +14,8 @@ class Colors:
     WHITE = '\033[37m'
     GRAY = '\033[90m'
 
+
+
 def info(msg):
     print(f"{Colors.CYAN} INFO: {msg}{Colors.RESET}")
 
@@ -23,6 +25,14 @@ def warn(msg):
 def error(msg):
     print(f"{Colors.RED}ERROR: {msg}{Colors.RESET}")
 
+
+
+_verbose_mode = False
+
+def enable_verbose():
+    global _verbose_mode
+    _verbose_mode = True
+
 def debug(msg):
-    # print(f"{Colors.GRAY}DEBUG: {msg}{Colors.RESET}")
-    pass
+    if _verbose_mode:
+        print(f"{Colors.GRAY}DEBUG: {msg}{Colors.RESET}")

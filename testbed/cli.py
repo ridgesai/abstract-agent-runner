@@ -5,9 +5,9 @@ import sys
 import time
 import argparse
 
-from utils.logger import info, warn, error, debug
 from sandbox.sandbox_manager import SandboxManager
 from problem_suites.polyglot.polyglot_suite import PolyglotSuite
+from utils.logger import info, warn, error, debug, enable_verbose
 from problem_suites.swebench_verified.swebench_verified_suite import SWEBenchVerifiedSuite
 
 
@@ -131,7 +131,7 @@ def main():
         epilog="""Examples:
   python cli.py polyglot affine-cipher test_agent.py
   python cli.py swebench_verified django__django-12308 test_agent.py
-  python cli.py polyglot affine-cipher test_agent.py --include-solution --log-docker-to-stdout"""
+  python cli.py polyglot affine-cipher test_agent.py --include-solution --log-docker-to-stdout --verbose"""
     )
     
     parser.add_argument("suite_name", help="Problem suite name (polyglot, swebench_verified)")
@@ -142,8 +142,13 @@ def main():
                        help="Print Docker container logs to stdout in real-time")
     parser.add_argument("--include-solution", action="store_true",
                        help="Expose the solution to the agent at /sandbox/solution.diff")
+    parser.add_argument("--verbose", action="store_true",
+                       help="Enable verbose (debug) logging")
     
     args = parser.parse_args()
+    
+    if args.verbose:
+        enable_verbose()
     
     return run_agent_on_problem(
         args.suite_name, 

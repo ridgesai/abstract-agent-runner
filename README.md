@@ -90,10 +90,11 @@ python cli.py swebench_verified django__django-12308 test_agent.py
 **Optional flags:**
 - `--log-docker-to-stdout`: Print Docker container logs to stdout in real-time
 - `--include-solution`: Expose the solution to the agent at `/sandbox/solution.diff`
+- `--verbose`: Enable verbose (debug) logging
 
 **Examples with flags:**
 ```bash
-python cli.py polyglot affine-cipher test_agent.py --include-solution --log-docker-to-stdout
+python cli.py polyglot affine-cipher test_agent.py --include-solution --log-docker-to-stdout --verbose
 ```
 
 ### Agent Implementation
