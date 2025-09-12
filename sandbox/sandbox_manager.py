@@ -2,14 +2,31 @@
 
 import os
 import json
+import time
 import docker
 import shutil
 import threading
 import traceback
 import subprocess
+from enum import Enum
 
 from utils.logger import debug, info, warn, error
 from utils.temp import create_temp_dir, cleanup_temp_dir
+
+
+SANDBOX_NETWORK_NAME = "sandbox-network"
+
+class SandboxNetworkMode(Enum):
+    # Restricted to sandbox-only local network (default)
+    SANDBOX = "sandbox"
+    
+    # Full Internet access
+    PUBLIC = "public"
+    
+    # Connected to both Docker internal network and Internet
+    BOTH = "both"
+
+
 
 class SandboxManager:
     """Manages Docker sandbox creation and execution."""
@@ -21,6 +38,9 @@ class SandboxManager:
 
         self._build_sandbox_image()
         self.sandboxes = {}
+        
+        self.docker_network_name = "sandbox-network"
+        self._create_sandbox_network()
 
         self.proxy_container = None
         self.proxy_temp_dir = None
@@ -47,8 +67,6 @@ class SandboxManager:
             error(f"[SANDBOX] Failed to build Docker image: {e}")
             raise
 
-
-
     def __del__(self):
         try:
             self.cleanup_all()
@@ -70,7 +88,7 @@ class SandboxManager:
 
 
 
-    def create_sandbox(self, *, script_path, input_data, on_mount, on_finish):
+    def create_sandbox(self, *, script_path, input_data, on_mount, on_finish, network_mode=SandboxNetworkMode.SANDBOX):
         """
         Create a Docker sandbox that runs the given Python script and provides it with the given input data.
         
@@ -106,6 +124,8 @@ class SandboxManager:
                         "traceback": "..." | None,
                         "logs": <stdout+stderr> | None
                     }
+            
+            network_mode: Network configuration (see SandboxNetworkMode)
              
         Returns:
             sandbox_id: Unique identifier for the created sandbox
@@ -144,6 +164,7 @@ class SandboxManager:
             "temp_dir": temp_dir,
             "script_name": script_name,
             "on_finish": on_finish,
+            "network_mode": network_mode,
             "container": None
         }
 
@@ -180,22 +201,35 @@ class SandboxManager:
         
         temp_dir = sandbox["temp_dir"]
         script_name = sandbox["script_name"]
+        network_mode = sandbox["network_mode"]
         
         result = {"status": "success", "output": None, "logs": "", "error": None, "traceback": None}
 
-
-
         # Try to run the sandbox
         try:
+            # Prepare container arguments
+            container_args = {
+                "image": "sandbox-image",
+                "command": f"python /sandbox/{script_name} 2>&1",
+                "name": sandbox_id,
+                "volumes": {temp_dir: {"bind": "/sandbox", "mode": "rw"}},
+                "remove": False,
+                "detach": True
+            }
+            
+            container_args.update(self._get_network_config(network_mode))
+            
             # Run the sandbox using Docker. This will block until the sandbox finishes. 
-            sandbox["container"] = self.docker.containers.run(
-                "sandbox-image",
-                f"python /sandbox/{script_name} 2>&1",
-                name=sandbox_id,
-                volumes={temp_dir: {"bind": "/sandbox", "mode": "rw"}},
-                remove=False,
-                detach=True
-            )
+            sandbox["container"] = self.docker.containers.run(**container_args)
+            
+            # For BOTH mode, connect to the default bridge network as well
+            if network_mode == SandboxNetworkMode.BOTH:
+                try:
+                    bridge_network = self.docker.networks.get("bridge")
+                    bridge_network.connect(sandbox["container"])
+                    debug(f"[SANDBOX] Connected <{sandbox_id}> to bridge network")
+                except Exception as e:
+                    warn(f"[SANDBOX] Failed to connect <{sandbox_id}> to bridge network: {e}")
 
             if self.log_docker_to_stdout:
                 for log_line in sandbox["container"].logs(stream=True, follow=True):
@@ -302,6 +336,42 @@ class SandboxManager:
 
 
 
+    def _get_network_config(self, network_mode):
+        if network_mode == SandboxNetworkMode.SANDBOX:
+            return {"network": SANDBOX_NETWORK_NAME}
+        elif network_mode == SandboxNetworkMode.PUBLIC:
+            return {}
+        elif network_mode == SandboxNetworkMode.BOTH:
+            return {"network": SANDBOX_NETWORK_NAME}
+        else:
+            raise ValueError(f"Unknown network mode: {network_mode}")
+
+    def _create_sandbox_network(self):
+        """
+        Create the isolated sandbox network.
+        
+        This network allows sandboxes to communicate with each other without going over the Internet.
+        """
+
+        try:
+            self.docker.networks.get(SANDBOX_NETWORK_NAME)
+            debug(f"[SANDBOX] Found sandbox network: {SANDBOX_NETWORK_NAME}")
+        except docker.errors.NotFound:
+            try:
+                self.docker.networks.create(
+                    SANDBOX_NETWORK_NAME,
+                    driver="bridge",
+                    internal=True
+                )
+                info(f"[SANDBOX] Created sandbox network: {SANDBOX_NETWORK_NAME}")
+            except Exception as e:
+                error(f"[SANDBOX] Failed to create sandbox network: {e}")
+                raise
+        except Exception as e:
+            raise
+
+
+
     def _create_sandbox_proxy(self):
         """
         Spawn the sandbox proxy server.
@@ -322,16 +392,26 @@ class SandboxManager:
         
         info(f"[SANDBOX] Running sandbox proxy")
         
-        # Run proxy in Docker container
+        # Run proxy in Docker container on both networks
         self.proxy_container = self.docker.containers.run(
             "sandbox-image",
             "python /sandbox_proxy/SANDBOX_PROXY.py",
-            name="sandbox-proxy",
+            name="sandbox_proxy",
             volumes={self.sandbox_proxy_temp_dir: {"bind": "/sandbox_proxy", "mode": "ro"}},
-            ports={"8080/tcp": 8080},
+            network=SANDBOX_NETWORK_NAME,
+            environment={"FORWARD_TO": "http://192.168.5.94:8000"},
             remove=False,
             detach=True
         )
+        
+        try:
+            bridge_network = self.docker.networks.get("bridge")
+            bridge_network.connect(self.proxy_container)
+            debug("[SANDBOX] Connected sandbox proxy to bridge network")
+        except Exception as e:
+            warn(f"[SANDBOX] Failed to connect sandbox proxy to bridge network: {e}")
+
+        time.sleep(1)
     
 
 
