@@ -1,5 +1,65 @@
 import requests
 import subprocess
+import json
+import uuid
+
+
+def inference(model, temperature, messages):
+    try:
+        payload = {
+            "run_id": str(uuid.uuid4()),
+            "model": model,
+            "temperature": temperature,
+            "messages": messages
+        }
+        
+        print(f"[AGENT] inference(): Sending inference request for model {model} (temperature {temperature}) with {len(messages)} messages")
+        response = requests.post(
+            "http://sandbox_proxy:8080/api/inference",
+            headers={"Content-Type": "application/json"},
+            data=json.dumps(payload)
+        )
+        
+        if response.status_code == 200:
+            result = response.text.strip('"')
+            print(f"[AGENT] inference(): Inference response: {len(result)} characters")
+            return result
+        else:
+            print(f"[AGENT] inference(): Inference failed with status {response.status_code}: {response.text}")
+            return None
+            
+    except Exception as e:
+        print(f"[AGENT] inference(): Inference request failed: {e}")
+        return None
+
+
+
+def embedding(input):
+    try:
+        payload = {
+            "run_id": str(uuid.uuid4()),
+            "input": input
+        }
+        
+        print(f"[AGENT] embedding(): Sending embedding request...")
+        response = requests.post(
+            "http://sandbox_proxy:8080/api/embedding",
+            headers={"Content-Type": "application/json"},
+            data=json.dumps(payload)
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            print(f"[AGENT] embedding(): Embedding response: {len(result)} dimensions")
+            return result
+        else:
+            print(f"[AGENT] embedding(): Embedding failed with status {response.status_code}: {response.text}")
+            return None
+            
+    except Exception as e:
+        print(f"[AGENT] embedding(): Embedding request failed: {e}")
+        return None
+
 
 
 def agent_main(input): 
@@ -7,19 +67,15 @@ def agent_main(input):
 
 
 
-    # # Print latest commit
-    # result = subprocess.run(['git', '--no-pager', 'log'], capture_output=True, text=True)
-    # print(result.stdout)
-
-
-
-    # Try to make HTTP request to sandbox proxy
-    try:
-        print("[AGENT] Making request to sandbox proxy...")
-        response = requests.get("http://host.docker.internal:8080/foo")
-        print(f"[AGENT] Proxy response: {response.text}")
-    except Exception as e:
-        print(f"[AGENT] Failed to reach proxy: {e}")
+    # Test inference function
+    message = "What is 2+2?"
+    print(f"[AGENT] <-- '{message}'")
+    messages = [
+        {"role": "user", "content": message}
+    ]
+    inference_result = inference("moonshotai/Kimi-K2-Instruct", 0.5, messages)
+    if inference_result:
+        print(f"[AGENT] --> '{inference_result}'")
 
 
 
