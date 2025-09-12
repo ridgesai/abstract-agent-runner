@@ -52,7 +52,7 @@ The Polyglot dataset is already included in this repository, sourced from the [A
 The SWE-Bench Verified dataset needs to be fetched separately due to its size. Navigate to the swebench_verified folder and run the fetch command:
 
 ```bash
-cd problem_suites/swebench_verified
+cd datasets/swebench_verified
 node fetch.js
 ```
 
@@ -64,10 +64,9 @@ This process will download approximately 1 GB of data and take around 5 minutes 
 
 ## Usage
 
-The framework is controlled through the CLI located in the testbed directory. The basic usage pattern is:
+The framework is controlled through the CLI located in the root directory. The basic usage pattern is:
 
 ```bash
-cd testbed
 python cli.py <suite_name> <problem_name> <agent_file>
 ```
 
@@ -99,24 +98,7 @@ python cli.py polyglot affine-cipher test_agent.py --include-solution --log-dock
 
 ### Agent Implementation
 
-Your agent file must implement an `agent_main(input_data)` function that:
-- Receives problem information through the `input_data` parameter
-- Returns a unified diff string representing the solution
-- Has access to the complete problem environment within the sandbox
-
-Example agent structure:
-```python
-def agent_main(input):
-    # Access problem statement
-    # TODO: Unify this input format
-    problem_statement = input["problem"]["problem_statement"]
-    
-    # Implement your solution logic here
-    # ...
-    
-    # Return a diff string
-    return diff_string
-```
+See `docs/agent_environment.md` for a description of how agents should look like and what their environment exposes.
 
 <br>
 
@@ -126,8 +108,8 @@ def agent_main(input):
 
 The Polyglot suite is complete.
 
-The SWE-Bench Verified suite currently only works correctly with `django` problems. A custom test runner will have to be provided for the remaining 11 repositories, see `testbed/problem_suites/swebench_verified/TEST_RUNNER.py`.
+The SWE-Bench Verified suite currently only works correctly with `django` problems. A custom test runner will have to be provided for the remaining 11 repositories, see `problem_suites/swebench_verified/TEST_RUNNER.py`.
 
 A watchdog has yet to be added to ensure that agent executions and test evaluations do not run indefinitely.
 
-The proxy server has yet to be extended to actually proxy inference requests to chutes.
+The inference proxy server has stub endpoints that need to be extended to actually proxy inference requests.

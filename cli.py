@@ -15,11 +15,11 @@ def run_agent_on_problem(suite_name, problem_name, agent_file, *, log_docker_to_
     suite_configs = {
         "polyglot": {
             "class": PolyglotSuite,
-            "path": "../problem_suites/polyglot"
+            "path": "datasets/polyglot"
         },
         "swebench_verified": {
             "class": SWEBenchVerifiedSuite,
-            "path": "../problem_suites/swebench_verified"
+            "path": "datasets/swebench_verified"
         }
     }
     
