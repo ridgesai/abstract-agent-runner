@@ -15,7 +15,7 @@ def get_file_diff(file1_path, file2_path):
     if not os.path.exists(file2_path):
         missing.append(file2_path)
     if missing:
-        raise FileNotFoundError(f"File(s) not found for diffing: {", ".join(missing)}")
+        raise FileNotFoundError(f"File(s) not found for diffing: {', '.join(missing)}")
     
     # Use diff command
     result = subprocess.run(
