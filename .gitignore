@@ -1,0 +1,11 @@
+# Mac
+.DS_Store
+
+# uv
+.venv/
+
+# Python
+__pycache__/
+
+# Problem suites
+problem_suites/swebench_verified/repos/
