@@ -95,7 +95,7 @@ class ProblemSuite(ABC):
 
 
 
-    def run_agent_in_sandbox_for_problem(self, sandbox_manager, problem_name, agent_source_code, on_finish):
+    def run_agent_in_sandbox_for_problem(self, sandbox_manager, problem_name, agent_source_code, on_finish, *, include_solution=False):
         """
         Run an agent in a sandbox for the given problem.
         
@@ -125,7 +125,6 @@ class ProblemSuite(ABC):
 
         def on_mount(temp_dir):
             # Copy problem files to the /sandbox directory
-            include_solution = os.environ.get("RIDGES_INCLUDE_GOLD_PATCH", "").lower() in ("true", "1", "yes")
             self.copy_problem_files_to_directory(problem_name, temp_dir, include_solution=include_solution)
             
             # Write agent source code to agent.py

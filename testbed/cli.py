@@ -3,6 +3,7 @@
 import os
 import sys
 import time
+import argparse
 
 from utils.logger import info, warn, error, debug
 from sandbox.sandbox_manager import SandboxManager
@@ -10,7 +11,7 @@ from problem_suites.polyglot.polyglot_suite import PolyglotSuite
 from problem_suites.swebench_verified.swebench_verified_suite import SWEBenchVerifiedSuite
 
 
-def run_agent_on_problem(suite_name, problem_name, agent_file):
+def run_agent_on_problem(suite_name, problem_name, agent_file, *, log_docker_to_stdout=False, include_solution=False):
     suite_configs = {
         "polyglot": {
             "class": PolyglotSuite,
@@ -36,7 +37,7 @@ def run_agent_on_problem(suite_name, problem_name, agent_file):
     
     info(f"Problem {problem_name} has {test_count} tests")
     
-    sandbox_manager = SandboxManager()
+    sandbox_manager = SandboxManager(log_docker_to_stdout=log_docker_to_stdout)
 
     with open(agent_file, "r") as f:
         agent_source_code = f.read()
@@ -109,7 +110,7 @@ def run_agent_on_problem(suite_name, problem_name, agent_file):
     
 
 
-    suite.run_agent_in_sandbox_for_problem(sandbox_manager, problem_name, agent_source_code, on_finish)
+    suite.run_agent_in_sandbox_for_problem(sandbox_manager, problem_name, agent_source_code, on_finish, include_solution=include_solution)
     
 
 
@@ -124,21 +125,33 @@ def run_agent_on_problem(suite_name, problem_name, agent_file):
 
 
 def main():
-    if len(sys.argv) != 4:
-        print("Usage: python cli.py <suite_name> <problem_name> <agent_file>")
-        print()
-        print("Available suites: polyglot, swebench_verified")
-        print()
-        print("Examples:")
-        print("  python cli.py polyglot affine-cipher my_agent.py")
-        print("  python cli.py swebench_verified django__django-12308 my_agent.py")
-        return 1
+    parser = argparse.ArgumentParser(
+        description="Agent runner CLI for problem suite benchmarks",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""Examples:
+  python cli.py polyglot affine-cipher test_agent.py
+  python cli.py swebench_verified django__django-12308 test_agent.py
+  python cli.py polyglot affine-cipher test_agent.py --include-solution --log-docker-to-stdout"""
+    )
     
-    suite_name = sys.argv[1]
-    problem_name = sys.argv[2] 
-    agent_file = sys.argv[3]
+    parser.add_argument("suite_name", help="Problem suite name (polyglot, swebench_verified)")
+    parser.add_argument("problem_name", help="Name of the specific problem to run")
+    parser.add_argument("agent_file", help="Path to the agent Python file")
     
-    return run_agent_on_problem(suite_name, problem_name, agent_file)
+    parser.add_argument("--log-docker-to-stdout", action="store_true", 
+                       help="Print Docker container logs to stdout in real-time")
+    parser.add_argument("--include-solution", action="store_true",
+                       help="Expose the solution to the agent at /sandbox/solution.diff")
+    
+    args = parser.parse_args()
+    
+    return run_agent_on_problem(
+        args.suite_name, 
+        args.problem_name, 
+        args.agent_file,
+        log_docker_to_stdout=args.log_docker_to_stdout,
+        include_solution=args.include_solution
+    )
 
 
 

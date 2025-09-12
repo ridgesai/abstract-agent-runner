@@ -16,8 +16,8 @@ class SandboxManager:
 
 
 
-    def __init__(self):
-        self.docker_client = docker.from_env()
+    def __init__(self, *, log_docker_to_stdout=False):
+        self.docker = docker.from_env()
 
         self._build_sandbox_image()
         self.sandboxes = {}
@@ -25,6 +25,8 @@ class SandboxManager:
         self.proxy_container = None
         self.proxy_temp_dir = None
         self._create_sandbox_proxy()
+
+        self.log_docker_to_stdout = log_docker_to_stdout
 
     def _build_sandbox_image(self):
         sandbox_image_tag = "sandbox-image"
@@ -185,10 +187,8 @@ class SandboxManager:
 
         # Try to run the sandbox
         try:
-            # Run the sandbox using Docker. This will block until the sandbox finishes.
-            print_docker_logs_to_stdout = os.environ.get("RIDGES_PRINT_DOCKER_LOGS_TO_STDOUT", "").lower() in ("true", "1", "yes")
-            
-            sandbox["container"] = self.docker_client.containers.run(
+            # Run the sandbox using Docker. This will block until the sandbox finishes. 
+            sandbox["container"] = self.docker.containers.run(
                 "sandbox-image",
                 f"python /sandbox/{script_name} 2>&1",
                 name=sandbox_id,
@@ -197,7 +197,7 @@ class SandboxManager:
                 detach=True
             )
 
-            if print_docker_logs_to_stdout:
+            if self.log_docker_to_stdout:
                 for log_line in sandbox["container"].logs(stream=True, follow=True):
                     debug(f"[DOCKER:{sandbox_id}] {log_line.decode('utf-8').rstrip()}")
             else:
@@ -323,7 +323,7 @@ class SandboxManager:
         info(f"[SANDBOX] Running sandbox proxy")
         
         # Run proxy in Docker container
-        self.proxy_container = self.docker_client.containers.run(
+        self.proxy_container = self.docker.containers.run(
             "sandbox-image",
             "python /sandbox_proxy/SANDBOX_PROXY.py",
             name="sandbox-proxy",
