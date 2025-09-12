@@ -87,6 +87,10 @@ python cli.py swebench_verified django__django-12308 test_agent.py
 - `polyglot`: Algorithmic programming challenges
 - `swebench_verified`: Real-world software engineering tasks
 
+You can set the environment variable `RIDGES_PRINT_DOCKER_LOGS_TO_STDOUT` to observe Docker logs in realtime.
+
+You can set the environment variable `RIDGES_INCLUDE_GOLD_PATCH` to expose the solution to the agent, which it can access at the path `/sandbox/solution.diff`.
+
 ### Agent Implementation
 
 Your agent file must implement an `agent_main(input_data)` function that:

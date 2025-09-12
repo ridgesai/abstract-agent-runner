@@ -23,7 +23,12 @@ class ProblemSuite(ABC):
 
 
     def _add_problem(self, name, *, problem_statement, solution_diff, tests, extra=None):
-        """Add a problem to the suite."""
+        """
+        Add a problem to the suite.
+        
+        The solution_diff is a diff that is known to be a correct solution to the problem.
+        It is only exposed to the agent if the environment variable RIDGES_INCLUDE_GOLD_PATCH is set.
+        """
 
         problem_data = {
             "name": name,
@@ -74,7 +79,7 @@ class ProblemSuite(ABC):
             {
                 "test_results": [
                     # For SWEBenchVerified...
-                    {"name": "test_m2m_initial_callable", "category": "pass_to_pass", "type": "test_type", "status": "pass" or "fail" or "skip"},
+                    {"name": "test_m2m_initial_callable", "category": "pass_to_pass", "type": "django", "status": "pass" or "fail" or "skip"},
                     
                     # For Polyglot...
                     {"name": "test_encode_with_a_not_coprime_to_m", "status": "pass" or "fail" or "skip"},
@@ -120,7 +125,8 @@ class ProblemSuite(ABC):
 
         def on_mount(temp_dir):
             # Copy problem files to the /sandbox directory
-            self.copy_problem_files_to_directory(problem_name, temp_dir, include_solution=True)
+            include_solution = os.environ.get("RIDGES_INCLUDE_GOLD_PATCH", "").lower() in ("true", "1", "yes")
+            self.copy_problem_files_to_directory(problem_name, temp_dir, include_solution=include_solution)
             
             # Write agent source code to agent.py
             agent_path = os.path.join(temp_dir, "agent.py")

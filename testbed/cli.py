@@ -113,7 +113,7 @@ def run_agent_on_problem(suite_name, problem_name, agent_file):
     
 
 
-    time.sleep(5)
+    time.sleep(1)
     while sandbox_manager.get_num_sandboxes() > 0:
         time.sleep(1)
     
