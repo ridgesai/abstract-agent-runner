@@ -33,3 +33,7 @@ curl -X POST "https://chutes-baai-bge-large-en-v1-5.chutes.ai/embed" \
 ```
 
 This doesn't follow OpenAI v1, do it directly.
+
+# Making requests to Targon
+
+TODO
