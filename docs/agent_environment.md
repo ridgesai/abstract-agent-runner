@@ -14,13 +14,13 @@ Here is the directory structure that an agent can expect to see. This is unified
     # The actual agent source code
     agent.py
 
-    # If include_solution (--include-solution) is set
-    solution.diff
-
 
 
     # The repository that the agent should work in (has .git/, etc.)
     repo/
+        # If include_solution (--include-solution) is set
+        solution.diff
+
         # The contents of this directory are specific to the suite and problem
 ```
 

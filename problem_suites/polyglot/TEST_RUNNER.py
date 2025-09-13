@@ -1,20 +1,27 @@
+import os
 import sys
 import json
 import traceback
 import importlib.util
 
 
+
+repo_path = "/sandbox/repo"
+sys.path.insert(0, repo_path)
+
+
+
 def run_tests():
     # Load main module
     print("[POLYGLOT_TEST_RUNNER] Loading main.py")
-    main_spec = importlib.util.spec_from_file_location("main", "/sandbox/main.py")
+    main_spec = importlib.util.spec_from_file_location("main", "/sandbox/repo/main.py")
     main_module = importlib.util.module_from_spec(main_spec)
     main_spec.loader.exec_module(main_module)
     print("[POLYGLOT_TEST_RUNNER] Loaded main.py")
     
     # Load tests module
     print("[POLYGLOT_TEST_RUNNER] Loading tests.py")
-    tests_spec = importlib.util.spec_from_file_location("tests", "/sandbox/tests.py")
+    tests_spec = importlib.util.spec_from_file_location("tests", "/sandbox/repo/tests.py")
     tests_module = importlib.util.module_from_spec(tests_spec)
     tests_spec.loader.exec_module(tests_module)
     print("[POLYGLOT_TEST_RUNNER] Loaded tests.py")

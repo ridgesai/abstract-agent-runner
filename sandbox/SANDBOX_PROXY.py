@@ -65,12 +65,13 @@ async def forward_post_request(request: Request, path: str):
 
 
 def main():
-    port = 8080
+    host = "0.0.0.0"
+    port = 80
     
-    print(f"[SANDBOX_PROXY] Starting sandbox proxy on port {port}")
+    print(f"[SANDBOX_PROXY] Starting sandbox proxy on {host}:{port}")
     print(f"[SANDBOX_PROXY] Forward to: {FORWARD_TO}")
     
-    uvicorn.run(app, host="0.0.0.0", port=port, log_level="error")
+    uvicorn.run(app, host=host, port=port, log_level="error")
 
 
 

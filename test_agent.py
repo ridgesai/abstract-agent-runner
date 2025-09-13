@@ -79,8 +79,8 @@ def agent_main(input):
 
 
 
-    print("[AGENT] Reading solution from /sandbox/solution.diff")
-    with open("/sandbox/solution.diff", "r") as f:
+    print("[AGENT] Reading solution from /sandbox/repo/solution.diff")
+    with open("/sandbox/repo/solution.diff", "r") as f:
         diff = f.read()
 
 
