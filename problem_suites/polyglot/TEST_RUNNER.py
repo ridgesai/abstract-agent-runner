@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import unittest
 import traceback
 import importlib.util
 
@@ -26,11 +27,11 @@ def run_tests():
     tests_spec.loader.exec_module(tests_module)
     print("[POLYGLOT_TEST_RUNNER] Loaded tests.py")
     
-    # Find test class
+    # Find test class (should inherit from unittest.TestCase)
     test_class = None
     for name in dir(tests_module):
         obj = getattr(tests_module, name)
-        if isinstance(obj, type) and hasattr(obj, "__bases__"):
+        if (isinstance(obj, type) and issubclass(obj, unittest.TestCase) and obj is not unittest.TestCase):
             test_class = obj
             break
     
