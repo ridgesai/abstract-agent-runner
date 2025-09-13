@@ -6,6 +6,7 @@ import shutil
 
 from utils.diff import get_file_diff
 from utils.logger import debug, info, warn, error
+from utils.git import init_repo_with_initial_commit
 from problem_suites.problem_suite import ProblemSuite
 
 
@@ -118,6 +119,14 @@ class PolyglotSuite(ProblemSuite):
             with open(os.path.join(dir, "solution.diff"), "w") as f:
                 f.write(problem["solution_diff"])
             debug(f"[POLYGLOT] Created solution.diff in {dir} for {problem_name}")
+
+        # Initialize git repository with initial commit
+        debug(f"[POLYGLOT] Initializing git repository in {dir} for {problem_name}")
+        success = init_repo_with_initial_commit(dir, "Initial commit")
+        if success:
+            debug(f"[POLYGLOT] Initialized git repository in {dir} for {problem_name}")
+        else:
+            warn(f"[POLYGLOT] Failed to initialize git repository in {dir} for {problem_name}")
 
 
 

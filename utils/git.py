@@ -7,6 +7,7 @@ import tempfile
 from utils.logger import debug, info, warn, error
 
 
+
 def clone_repo_at_commit(repo_path, commit_hash, target_dir):
     """
     Clone a repository at a specific commit into the target directory.
@@ -108,3 +109,55 @@ def verify_commit_exists(repo_path, commit_hash):
         
     except Exception:
         return False
+
+
+
+def init_repo_with_initial_commit(directory, commit_message="Initial commit"):
+    """
+    Initialize a git repository in the given directory and make an initial commit with all files in the directory.
+    
+    Args:
+        directory: Path to the directory to initialize as a git repo
+        commit_message: Commit message for the initial commit (default: "Initial commit")
+        
+    Returns:
+        bool: True if successful, False otherwise
+    """
+
+    try:
+        # Change to the target directory
+        original_cwd = os.getcwd()
+        os.chdir(directory)
+        
+        # Initialize git repository
+        debug(f"[GIT] Initializing git repository in {directory}")
+        subprocess.run(['git', 'init'], capture_output=True, text=True, check=True)
+        debug(f"[GIT] Initialized git repository in {directory}")
+
+        # Add all files
+        debug(f"[GIT] Adding all files in {directory}")
+        subprocess.run(['git', 'add', '.'], capture_output=True, text=True, check=True)
+        debug(f"[GIT] Added all files in {directory}")
+        
+        # Make initial commit
+        debug(f"[GIT] Making initial commit: {commit_message}")
+        subprocess.run(['git', 'commit', '-m', commit_message], capture_output=True, text=True, check=True)
+        debug(f"[GIT] Made initial commit: {commit_message}")
+        
+        return True
+        
+    except subprocess.CalledProcessError as e:
+        error(f"[GIT] Git command failed: {e}")
+        error(f"[GIT] Command output: {e.stdout}")
+        error(f"[GIT] Command error: {e.stderr}")
+
+        return False
+    
+    except Exception as e:
+        error(f"[GIT] Failed to initialize git repository: {e}")
+
+        return False
+    
+    finally:
+        # Always return to original directory
+        os.chdir(original_cwd)
