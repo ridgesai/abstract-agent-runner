@@ -12,7 +12,7 @@ from utils.logger import info, warn, error, debug, enable_verbose
 from problem_suites.swebench_verified.swebench_verified_suite import SWEBenchVerifiedSuite
 
 
-def run_agent_on_problem(suite_name, problem_name, agent_file, *, log_docker_to_stdout=False, include_solution=False):
+def run_agent_on_problem(suite_name, problem_name, agent_file, *, log_docker_to_stdout=False, include_solution=False, timeout=300):
     suite_configs = {
         "polyglot": {
             "class": PolyglotSuite,
@@ -90,7 +90,7 @@ def run_agent_on_problem(suite_name, problem_name, agent_file, *, log_docker_to_
                     tests_skipped = sum(1 for test in test_results if test["status"] == "skip")
                     print(f"{tests_passed} passed, {tests_failed} failed, {tests_skipped} skipped")
                     for test in test_results:
-                        print(f"{test['name']} - {test['category']} - {test['type']} - {test['status']}")
+                        print(f"{test['name']} - {test.get('category', 'no category')} - {test['status']}")
 
                     n = len((result.get("logs") or "").splitlines())
                     print(f"========== LOGS ({n} line{'s' if n != 1 else ''}) ==========")
@@ -109,7 +109,7 @@ def run_agent_on_problem(suite_name, problem_name, agent_file, *, log_docker_to_
                 print()
                 print()
             
-            suite.evaluate_solution_diff(sandbox_manager, run_id, problem_name, diff, on_finish)
+            suite.evaluate_solution_diff(sandbox_manager, run_id, problem_name, diff, on_finish, timeout=timeout)
         else:
             print("========== ERROR ==========")
             print(result.get("error", ""))
@@ -125,7 +125,7 @@ def run_agent_on_problem(suite_name, problem_name, agent_file, *, log_docker_to_
     
 
 
-    suite.run_agent_in_sandbox_for_problem(sandbox_manager, run_id, problem_name, agent_source_code, on_finish, include_solution=include_solution)
+    suite.run_agent_in_sandbox_for_problem(sandbox_manager, run_id, problem_name, agent_source_code, on_finish, timeout=timeout, include_solution=include_solution)
     
 
 
@@ -159,6 +159,8 @@ def main():
                        help="Expose the solution to the agent at /sandbox/solution.diff")
     parser.add_argument("--verbose", action="store_true",
                        help="Enable verbose (debug) logging")
+    parser.add_argument("--timeout", type=int, default=10,
+                       help="Timeout in seconds for sandbox execution (default: 10)")
     
     args = parser.parse_args()
     
@@ -170,7 +172,8 @@ def main():
         args.problem_name, 
         args.agent_file,
         log_docker_to_stdout=args.log_docker_to_stdout,
-        include_solution=args.include_solution
+        include_solution=args.include_solution,
+        timeout=args.timeout
     )
 
 
