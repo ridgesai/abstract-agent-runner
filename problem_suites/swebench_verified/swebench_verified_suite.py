@@ -173,7 +173,7 @@ class SWEBenchVerifiedSuite(ProblemSuite):
                         "category": category.lower(),
                         "status": "pass"
                     })
-                for test in tests["failure"]:
+                for test_name in tests["failure"]:
                     test_results.append({
                         "name": test_name,
                         "category": category.lower(),
