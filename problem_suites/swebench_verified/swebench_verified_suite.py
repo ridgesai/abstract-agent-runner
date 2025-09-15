@@ -171,14 +171,12 @@ class SWEBenchVerifiedSuite(ProblemSuite):
                     test_results.append({
                         "name": test_name,
                         "category": category.lower(),
-                        "type": "swebench",
                         "status": "pass"
                     })
                 for test in tests["failure"]:
                     test_results.append({
                         "name": test_name,
                         "category": category.lower(),
-                        "type": "swebench",
                         "status": "fail"
                     })
             
@@ -276,7 +274,7 @@ class SWEBenchVerifiedSuite(ProblemSuite):
         # That Docker image has a name similar to "sweb.eval.x86_64.astropy__astropy-12907" (4 GB).
         debug(f"[SWEBENCH] Running evaluation for {problem_name}")
         start_time = time.time()
-        run_instance(
+        result = run_instance(
             test_spec=test_spec,
             pred=pred,
             rm_image=False,
@@ -286,6 +284,9 @@ class SWEBenchVerifiedSuite(ProblemSuite):
             timeout=timeout,
             rewrite_reports=False
         )
+        if not result["completed"]:
+            warn(f"[SWEBENCH] Evaluation for {problem_name} was not completed")
+            raise RuntimeError(f"Evaluation for {problem_name} was not completed")
         elapsed_time = time.time() - start_time
         debug(f"[SWEBENCH] Successfully ran evaluation for {problem_name} in {elapsed_time:.1f} seconds")
 

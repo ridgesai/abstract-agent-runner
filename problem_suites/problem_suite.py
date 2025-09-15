@@ -79,7 +79,7 @@ class ProblemSuite(ABC):
             {
                 "test_results": [
                     # For SWEBenchVerified...
-                    {"name": "test_m2m_initial_callable", "category": "pass_to_pass", "type": "django", "status": "pass" or "fail" or "skip"},
+                    {"name": "test_m2m_initial_callable", "category": "pass_to_pass", "status": "pass" or "fail" or "skip"},
                     
                     # For Polyglot...
                     {"name": "test_encode_with_a_not_coprime_to_m", "status": "pass" or "fail" or "skip"},
@@ -158,9 +158,6 @@ class ProblemSuite(ABC):
 
             # Call user's original callback
             on_finish(result)
-            
-            # Cleanup the sandbox
-            sandbox_manager.cleanup_sandbox(sandbox_id)
         
         # Create sandbox that runs the AGENT_RUNNER.py script
         agent_runner_path = os.path.join(os.path.dirname(__file__), "AGENT_RUNNER.py")
@@ -233,9 +230,6 @@ class ProblemSuite(ABC):
             info(f"[PROBLEM_SUITE] Finished sandbox to evaluate solution diff for problem {problem_name}: {result.get('status')}")
 
             on_finish(result)
-
-            # Cleanup the sandbox
-            sandbox_manager.cleanup_sandbox(sandbox_id)
         
         # Create sandbox with test runner
         sandbox_id = sandbox_manager.create_sandbox(
