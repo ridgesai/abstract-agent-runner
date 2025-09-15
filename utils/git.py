@@ -147,14 +147,14 @@ def init_repo_with_initial_commit(directory, commit_message="Initial commit"):
         return True
         
     except subprocess.CalledProcessError as e:
-        error(f"[GIT] Git command failed: {e}")
-        error(f"[GIT] Command output: {e.stdout}")
-        error(f"[GIT] Command error: {e.stderr}")
+        warn(f"[GIT] Git command failed: {e}")
+        warn(f"[GIT] Command output: {e.stdout}")
+        warn(f"[GIT] Command error: {e.stderr}")
 
         return False
     
     except Exception as e:
-        error(f"[GIT] Failed to initialize git repository: {e}")
+        warn(f"[GIT] Failed to initialize git repository: {e}")
 
         return False
     

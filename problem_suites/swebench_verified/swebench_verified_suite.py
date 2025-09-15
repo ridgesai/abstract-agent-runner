@@ -112,7 +112,7 @@ class SWEBenchVerifiedSuite(ProblemSuite):
         
         problem = self.get_problem(problem_name)
         if not problem:
-            error(f"[SWEBENCH] Problem {problem_name} not found")
+            warn(f"[SWEBENCH] Problem {problem_name} not found")
             raise ValueError(f"Problem {problem_name} not found")
 
         # Get repository and commit information from metadata
@@ -128,7 +128,7 @@ class SWEBenchVerifiedSuite(ProblemSuite):
         debug(f"[SWEBENCH] Cloning {repo} at commit {base_commit} to {dir} for {problem_name}")
         success, error_msg = clone_repo_at_commit(repo_path, base_commit, dir)
         if not success:
-            error(f"[SWEBENCH] Failed to clone repository for {problem_name}: {error_msg}")
+            warn(f"[SWEBENCH] Failed to clone repository for {problem_name}: {error_msg}")
             raise RuntimeError(f"Failed to clone repository for {problem_name}: {error_msg}")
         debug(f"[SWEBENCH] Successfully copied repository files for {problem_name}")
 
@@ -220,7 +220,7 @@ class SWEBenchVerifiedSuite(ProblemSuite):
 
         problem = self.get_problem(problem_name)
         if not problem:
-            error(f"[SWEBENCH] Problem {problem_name} not found")
+            warn(f"[SWEBENCH] Problem {problem_name} not found")
             raise ValueError(f"Problem {problem_name} not found")
 
 
@@ -242,7 +242,7 @@ class SWEBenchVerifiedSuite(ProblemSuite):
         )
         elapsed_time = time.time() - start_time
         if (len(build_failed) > 0):
-            error(f"[SWEBENCH] Failed to build environment images for {problem_name}")
+            warn(f"[SWEBENCH] Failed to build environment images for {problem_name}")
             raise RuntimeError(f"Failed to build environment images for {problem_name}")
         debug(f"[SWEBENCH] Successfully built environment images for {problem_name} in {elapsed_time:.1f} seconds")
 
@@ -257,7 +257,7 @@ class SWEBenchVerifiedSuite(ProblemSuite):
         )
         elapsed_time = time.time() - start_time
         if (len(build_failed) > 0):
-            error(f"[SWEBENCH] Failed to build instance images for {problem_name}")
+            warn(f"[SWEBENCH] Failed to build instance images for {problem_name}")
             raise RuntimeError(f"Failed to build instance images for {problem_name}")
         debug(f"[SWEBENCH] Successfully built instance images for {problem_name} in {elapsed_time:.1f} seconds")
 

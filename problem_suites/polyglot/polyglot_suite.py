@@ -95,7 +95,7 @@ class PolyglotSuite(ProblemSuite):
 
         problem = self.get_problem(problem_name)
         if not problem:
-            error(f"[POLYGLOT] Problem {problem_name} not found")
+            warn(f"[POLYGLOT] Problem {problem_name} not found")
             raise ValueError(f"Problem {problem_name} not found")
 
         problem_dir = os.path.join(self.problem_suite_path, problem_name)

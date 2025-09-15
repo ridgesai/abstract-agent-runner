@@ -3,6 +3,7 @@
 import os
 import sys
 import time
+import uuid
 import argparse
 
 from sandbox.sandbox_manager import SandboxManager
@@ -37,24 +38,34 @@ def run_agent_on_problem(suite_name, problem_name, agent_file, *, log_docker_to_
     
     info(f"Problem {problem_name} has {test_count} tests")
     
+
+
     sandbox_manager = SandboxManager(log_docker_to_stdout=log_docker_to_stdout)
+
+
 
     with open(agent_file, "r") as f:
         agent_source_code = f.read()
 
+    run_id = str(uuid.uuid4())
+
+
+
     
 
     def on_finish(result):
+        time.sleep(0.5)
+
         print()
         print()
         print()
 
         if (result["status"] == "success"):
-            n = len(result.get("diff", "").splitlines())
+            n = len((result.get("diff") or "").splitlines())
             print(f"========== DIFF ({n} line{'s' if n != 1 else ''}) ==========")
             print(result.get("diff", ""))
 
-            n = len(result.get("logs", "").splitlines())
+            n = len((result.get("logs") or "").splitlines())
             print(f"========== LOGS ({n} line{'s' if n != 1 else ''}) ==========")
             # print(result.get("logs", ""))
 
@@ -65,6 +76,8 @@ def run_agent_on_problem(suite_name, problem_name, agent_file, *, log_docker_to_
             diff = result["diff"]
             
             def on_finish(result):
+                time.sleep(0.5)
+                
                 print()
                 print()
                 print()
@@ -77,7 +90,7 @@ def run_agent_on_problem(suite_name, problem_name, agent_file, *, log_docker_to_
                     tests_skipped = sum(1 for test in test_results if test["status"] == "skip")
                     print(f"{tests_passed} passed, {tests_failed} failed, {tests_skipped} skipped")
 
-                    n = len(result.get("logs", "").splitlines())
+                    n = len((result.get("logs") or "").splitlines())
                     print(f"========== LOGS ({n} line{'s' if n != 1 else ''}) ==========")
                     # print(result["logs"])
                 else:
@@ -94,7 +107,7 @@ def run_agent_on_problem(suite_name, problem_name, agent_file, *, log_docker_to_
                 print()
                 print()
             
-            suite.evaluate_solution_diff(sandbox_manager, problem_name, diff, on_finish)
+            suite.evaluate_solution_diff(sandbox_manager, run_id, problem_name, diff, on_finish)
         else:
             print("========== ERROR ==========")
             print(result.get("error", ""))
@@ -110,7 +123,7 @@ def run_agent_on_problem(suite_name, problem_name, agent_file, *, log_docker_to_
     
 
 
-    suite.run_agent_in_sandbox_for_problem(sandbox_manager, problem_name, agent_source_code, on_finish, include_solution=include_solution)
+    suite.run_agent_in_sandbox_for_problem(sandbox_manager, run_id, problem_name, agent_source_code, on_finish, include_solution=include_solution)
     
 
 
