@@ -89,6 +89,8 @@ def run_agent_on_problem(suite_name, problem_name, agent_file, *, log_docker_to_
                     tests_failed = sum(1 for test in test_results if test["status"] == "fail")
                     tests_skipped = sum(1 for test in test_results if test["status"] == "skip")
                     print(f"{tests_passed} passed, {tests_failed} failed, {tests_skipped} skipped")
+                    for test in test_results:
+                        print(f"{test['name']} - {test['category']} - {test['type']} - {test['status']}")
 
                     n = len((result.get("logs") or "").splitlines())
                     print(f"========== LOGS ({n} line{'s' if n != 1 else ''}) ==========")

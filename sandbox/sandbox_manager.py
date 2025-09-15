@@ -14,6 +14,7 @@ from utils.logger import debug, info, warn, error
 from utils.temp import create_temp_dir, cleanup_temp_dir
 
 
+
 SANDBOX_NETWORK_NAME = "sandbox-network"
 
 class SandboxNetworkMode(Enum):
@@ -34,12 +35,29 @@ class SandboxManager:
 
 
     def __init__(self, *, log_docker_to_stdout=False):
-        self.docker = docker.from_env()
+        try:
+            self.docker = docker.from_env()
+        except Exception as e:
+            error(f"[SANDBOX] Failed to create Docker client: {e}")
+
+        debug(f"[SANDBOX] Stopping and deleting all containers")
+        for container in self.docker.containers.list(all=True):
+            try:
+                container.stop(timeout=3)
+            except Exception as e:
+                warn(f"[SANDBOX] Could not stop container {container.name}: {e}")
+            try:
+                container.remove(force=True)
+            except Exception as e:
+                warn(f"[SANDBOX] Could not remove container {container.name}: {e}")
+        self.docker.containers.prune()
+        debug(f"[SANDBOX] Stopped and deleted all containers")
+
+
 
         self._build_sandbox_image()
         self.sandboxes = {}
         
-        self.docker_network_name = "sandbox-network"
         self._create_sandbox_network()
 
         self.proxy_container = None
@@ -88,7 +106,7 @@ class SandboxManager:
 
 
 
-    def create_sandbox(self, *, script_path, input_data, on_mount, on_finish, network_mode=SandboxNetworkMode.SANDBOX):
+    def create_sandbox(self, *, script_path, input_data, on_mount, on_finish, network_mode=SandboxNetworkMode.SANDBOX, timeout=None):
         """
         Create a Docker sandbox that runs the given Python script and provides it with the given input data.
         
@@ -126,6 +144,10 @@ class SandboxManager:
                     }
             
             network_mode: Network configuration (see SandboxNetworkMode)
+                Default: SandboxNetworkMode.SANDBOX
+
+            timeout: Timeout in seconds (or None for no timeout)
+                Default: None
              
         Returns:
             sandbox_id: Unique identifier for the created sandbox
@@ -165,6 +187,7 @@ class SandboxManager:
             "script_name": script_name,
             "on_finish": on_finish,
             "network_mode": network_mode,
+            "timeout": timeout, # TODO
             "container": None
         }
 
@@ -212,7 +235,12 @@ class SandboxManager:
                 "image": "sandbox-image",
                 "command": f"python /sandbox/{script_name} 2>&1",
                 "name": sandbox_id,
-                "volumes": {temp_dir: {"bind": "/sandbox", "mode": "rw"}},
+                "volumes": {
+                    temp_dir: {"bind": "/sandbox", "mode": "rw"}
+                },
+                "environment": {
+                    "PYTHONUNBUFFERED": "1"
+                },
                 "remove": False,
                 "detach": True
             }
@@ -397,9 +425,14 @@ class SandboxManager:
             "sandbox-image",
             "python /sandbox_proxy/SANDBOX_PROXY.py",
             name="sandbox_proxy",
-            volumes={self.sandbox_proxy_temp_dir: {"bind": "/sandbox_proxy", "mode": "ro"}},
+            volumes={
+                self.sandbox_proxy_temp_dir: {"bind": "/sandbox_proxy", "mode": "ro"}
+            },
             network=SANDBOX_NETWORK_NAME,
-            environment={"FORWARD_TO": "http://192.168.5.94:8000"},
+            environment={
+                "PYTHONUNBUFFERED": "1",
+                "FORWARD_TO": "http://192.168.5.94:8000" # TODO
+            },
             remove=False,
             detach=True
         )
