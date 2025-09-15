@@ -66,6 +66,8 @@ class SandboxManager:
 
         self.log_docker_to_stdout = log_docker_to_stdout
 
+        self._start_watchdog()
+
     def _build_sandbox_image(self):
         sandbox_image_tag = "sandbox-image"
         sandbox_dir = os.path.dirname(__file__)
@@ -103,6 +105,29 @@ class SandboxManager:
                 
         except Exception:
             pass
+
+
+
+    def _start_watchdog(self):
+        self.watchdog_thread = threading.Thread(target=self._watchdog)
+        self.watchdog_thread.daemon = True
+        debug("[SANDBOX] Starting watchdog thread")
+        self.watchdog_thread.start()
+
+    def _watchdog(self):
+        debug("[SANDBOX] Started watchdog thread")
+        while True:
+            time.sleep(1)
+            for sandbox_id in list(self.sandboxes.keys()):
+                sandbox = self.sandboxes[sandbox_id]
+                if sandbox["container"]:
+                    elapsed = time.time() - sandbox["start_time"]
+                    if elapsed > sandbox["timeout"]:
+                        warn(f"[SANDBOX] Killing sandbox {sandbox_id} - exceeded timeout of {sandbox['timeout']} seconds (ran for {elapsed:.1f} seconds)")
+                        try:
+                            sandbox["container"].kill()
+                        except Exception as e:
+                            warn(f"[SANDBOX] Failed to kill container {sandbox_id}: {e}")
 
 
 
@@ -151,9 +176,6 @@ class SandboxManager:
              
         Returns:
             sandbox_id: Unique identifier for the created sandbox
-
-        Note:
-            You should call cleanup_sandbox() from within the on_finish callback.
         """
 
         # Create temporary directory on host
@@ -166,7 +188,12 @@ class SandboxManager:
             on_mount(temp_dir)
         except Exception as e:
             warn(f"[SANDBOX] on_mount({temp_dir}) callback failed for <{sandbox_id}>: {e}")
-            on_finish({"status": "error", "error": f"on_mount() callback failed: {e}", "traceback": traceback.format_exc()})
+            try:
+                on_finish({"status": "error", "error": f"on_mount() callback failed: {e}", "traceback": traceback.format_exc()})
+            except Exception as e:
+                warn(f"[SANDBOX] on_finish() callback failed for <{sandbox_id}>: {e}")
+            finally:
+                self.cleanup_sandbox(sandbox_id)
             return
 
         # Copy Python script to temp directory
@@ -187,7 +214,8 @@ class SandboxManager:
             "script_name": script_name,
             "on_finish": on_finish,
             "network_mode": network_mode,
-            "timeout": timeout, # TODO
+            "timeout": timeout,
+            "start_time": time.time(),
             "container": None
         }
 
@@ -220,7 +248,12 @@ class SandboxManager:
             warn(f"[SANDBOX] <{sandbox_id}> failed: {error_msg}")
             result["status"] = "error"
             result["error"] = error_msg
-            sandbox["on_finish"](result)
+            try:
+                sandbox["on_finish"](result)
+            except Exception as e:
+                warn(f"[SANDBOX] on_finish() callback failed for <{sandbox_id}>: {e}")
+            finally:
+                self.cleanup_sandbox(sandbox_id)
         
         temp_dir = sandbox["temp_dir"]
         script_name = sandbox["script_name"]
@@ -317,7 +350,12 @@ class SandboxManager:
             finish_with_error(f"output.json contains an invalid status field: {output['status']}", result)
             return
         
-        sandbox["on_finish"](result)
+        try:
+            sandbox["on_finish"](result)
+        except Exception as e:
+            warn(f"[SANDBOX] on_finish() callback failed for <{sandbox_id}>: {e}")
+        finally:
+            self.cleanup_sandbox(sandbox_id)
 
 
 
