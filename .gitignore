@@ -12,3 +12,6 @@ __pycache__/
 
 # Problem suites
 problem_suites/swebench_verified/repos/
+
+# SWE-Bench
+logs/

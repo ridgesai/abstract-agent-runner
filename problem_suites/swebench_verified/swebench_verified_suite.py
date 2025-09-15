@@ -2,12 +2,17 @@
 
 import os
 import json
-import shutil
+import time
+import traceback
 
+from pathlib import Path
 from utils.diff import apply_diff
 from utils.logger import debug, info, warn, error
 from problem_suites.problem_suite import ProblemSuite
+from swebench.harness.constants import SWEbenchInstance
 from utils.git import clone_repo_at_commit, verify_commit_exists
+from swebench.harness.run_evaluation import make_test_spec, run_instance
+from swebench.harness.docker_build import build_env_images, build_instance_images
 
 
 
@@ -90,9 +95,7 @@ class SWEBenchVerifiedSuite(ProblemSuite):
                         "fail_to_pass": json.loads(problem.get("FAIL_TO_PASS"))
                     },
                     extra={
-                        "repo": repo,
-                        "base_commit": base_commit,
-                        "test_patch": problem.get("test_patch")
+                        "swebench_instance": problem
                     }
                 )
             
@@ -113,8 +116,9 @@ class SWEBenchVerifiedSuite(ProblemSuite):
             raise ValueError(f"Problem {problem_name} not found")
 
         # Get repository and commit information from metadata
-        repo = problem.get("repo")
-        base_commit = problem.get("base_commit")
+        swebench_instance = problem.get("swebench_instance")
+        repo = swebench_instance.get("repo")
+        base_commit = swebench_instance.get("base_commit")
 
         # Convert repository format from "owner/name" to directory name format "owner_name"
         repo_dir_name = repo.replace("/", "_")
@@ -128,15 +132,17 @@ class SWEBenchVerifiedSuite(ProblemSuite):
             raise RuntimeError(f"Failed to clone repository for {problem_name}: {error_msg}")
         debug(f"[SWEBENCH] Successfully copied repository files for {problem_name}")
 
-        # Copy test files if requested
-        if include_tests:
-            test_patch = problem.get("test_patch")
-            debug(f"[SWEBENCH] Applying test patch for {problem_name}")
-            success, error_msg = apply_diff(test_patch, dir)
-            if not success:
-                error(f"[SWEBENCH] Failed to apply test patch for {problem_name}: {error_msg}")
-                raise RuntimeError(f"Failed to apply test patch for {problem_name}: {error_msg}")
-            debug(f"[SWEBENCH] Successfully applied test patch for {problem_name}")
+        # REMOVED: Falling back to SWE-Bench Harness
+        #
+        # # Copy test files if requested
+        # if include_tests:
+        #     test_patch = swebench_instance.get("test_patch")
+        #     debug(f"[SWEBENCH] Applying test patch for {problem_name}")
+        #     success, error_msg = apply_diff(test_patch, dir)
+        #     if not success:
+        #         error(f"[SWEBENCH] Failed to apply test patch for {problem_name}: {error_msg}")
+        #         raise RuntimeError(f"Failed to apply test patch for {problem_name}: {error_msg}")
+        #     debug(f"[SWEBENCH] Successfully applied test patch for {problem_name}")
         
         # Copy solution files if requested
         if include_solution:
@@ -150,6 +156,48 @@ class SWEBenchVerifiedSuite(ProblemSuite):
     def get_test_runner_path(self):
         return os.path.join(os.path.dirname(__file__), "TEST_RUNNER.py")
 
+
+
+    def evaluate_solution_diff(self, sandbox_manager, run_id, problem_name, solution_diff, on_finish, *, timeout=None):
+        try:
+            report = self.run_swebench_evaluation(sandbox_manager, run_id, problem_name, solution_diff, timeout=timeout)
+
+            # Convert to our format
+            report = report[problem_name]
+
+            test_results = []
+            for category, tests in report["tests_status"].items():
+                for test_name in tests["success"]:
+                    test_results.append({
+                        "name": test_name,
+                        "category": category.lower(),
+                        "type": "swebench",
+                        "status": "pass"
+                    })
+                for test in tests["failure"]:
+                    test_results.append({
+                        "name": test_name,
+                        "category": category.lower(),
+                        "type": "swebench",
+                        "status": "fail"
+                    })
+            
+            on_finish({
+                "status": "success",
+                "test_results": test_results,
+                "logs": None # TODO: /logs/run_evaluation/run_id/run_id/{run_instance.log,test_output.txt}
+            })
+        except Exception as e:
+            warn(f"[SWEBENCH] Failed to run evaluation for {problem_name}: {e}")
+            on_finish({
+                "status": "error",
+                "error": str(e),
+                "traceback": traceback.format_exc(),
+                "logs": None # TODO: /logs/run_evaluation/run_id/run_id/{run_instance.log,test_output.txt}
+            })
+
+
+
     def get_problem_test_count(self, problem_name):
         problem = self.get_problem(problem_name)
         if not problem:
@@ -160,3 +208,92 @@ class SWEBenchVerifiedSuite(ProblemSuite):
         fail_to_pass = tests.get("fail_to_pass")
         
         return len(pass_to_pass) + len(fail_to_pass)
+
+    
+
+    def run_swebench_evaluation(self, sandbox_manager, run_id, problem_name, diff, *, timeout=None):
+        """
+        Runs a SWE-Bench evaluation for the given instance ID on the given patch.
+        This is a blocking function.
+        Returns the SWE-Bench report.
+        """
+
+        problem = self.get_problem(problem_name)
+        if not problem:
+            error(f"[SWEBENCH] Problem {problem_name} not found")
+            raise ValueError(f"Problem {problem_name} not found")
+
+
+
+        # This would be the object that you'd find in swebench_verified.json
+        swebench_instance = problem.get("swebench_instance")
+
+        # Need to create a test spec before calling run_instance()
+        test_spec = make_test_spec(SWEbenchInstance(**swebench_instance))
+
+        # Build environment images
+        debug(f"[SWEBENCH] Building environment images for {problem_name}")
+        start_time = time.time()
+        build_successful, build_failed = build_env_images(
+            client=sandbox_manager.docker,
+            dataset=[test_spec],
+            force_rebuild=False,
+            max_workers=4
+        )
+        elapsed_time = time.time() - start_time
+        if (len(build_failed) > 0):
+            error(f"[SWEBENCH] Failed to build environment images for {problem_name}")
+            raise RuntimeError(f"Failed to build environment images for {problem_name}")
+        debug(f"[SWEBENCH] Successfully built environment images for {problem_name} in {elapsed_time:.1f} seconds")
+
+        # Build instance images
+        debug(f"[SWEBENCH] Building instance images for {problem_name}")
+        start_time = time.time()
+        build_successful, build_failed = build_instance_images(
+            client=sandbox_manager.docker,
+            dataset=[test_spec],
+            force_rebuild=False,
+            max_workers=4
+        )
+        elapsed_time = time.time() - start_time
+        if (len(build_failed) > 0):
+            error(f"[SWEBENCH] Failed to build instance images for {problem_name}")
+            raise RuntimeError(f"Failed to build instance images for {problem_name}")
+        debug(f"[SWEBENCH] Successfully built instance images for {problem_name} in {elapsed_time:.1f} seconds")
+
+        # A "prediction" in the context of SWE-Bench is literally just a patch.
+        # The model_name_or_path, model_patch, and instance_id keys are required.
+        pred = {
+            "model_name_or_path": run_id,
+            "model_patch": diff,
+            "instance_id": problem_name
+        }
+
+
+
+        # Run the instance using SWE-Bench
+        # This actually builds a Docker image for the specific problem.
+        # That Docker image has a name similar to "sweb.eval.x86_64.astropy__astropy-12907" (4 GB).
+        debug(f"[SWEBENCH] Running evaluation for {problem_name}")
+        start_time = time.time()
+        run_instance(
+            test_spec=test_spec,
+            pred=pred,
+            rm_image=False,
+            force_rebuild=False,
+            client=sandbox_manager.docker,
+            run_id=run_id,
+            timeout=timeout,
+            rewrite_reports=False
+        )
+        elapsed_time = time.time() - start_time
+        debug(f"[SWEBENCH] Successfully ran evaluation for {problem_name} in {elapsed_time:.1f} seconds")
+
+
+
+        # Read the report
+        report_path = Path("logs/run_evaluation") / run_id / run_id / problem_name / "report.json"
+        with open(report_path) as f:
+            report = json.load(f)
+
+        return report
