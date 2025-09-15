@@ -12,3 +12,7 @@ dependencies = [
     "swebench>=4.1.0",
     "uvicorn>=0.35.0",
 ]
+
+[tool.setuptools.packages.find]
+include = ["inference_proxy*", "problem_suites*", "sandbox*", "utils*"]
+exclude = ["datasets*"]
