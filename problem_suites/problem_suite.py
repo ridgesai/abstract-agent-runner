@@ -95,7 +95,7 @@ class ProblemSuite(ABC):
 
 
 
-    def run_agent_in_sandbox_for_problem(self, sandbox_manager, problem_name, agent_source_code, on_finish, *, include_solution=False):
+    def run_agent_in_sandbox_for_problem(self, sandbox_manager, run_id, problem_name, agent_source_code, on_finish, *, timeout=None, include_solution=False):
         """
         Run an agent in a sandbox for the given problem.
         
@@ -122,6 +122,8 @@ class ProblemSuite(ABC):
             raise ValueError(f"Problem {problem_name} not found")
 
         info(f"[PROBLEM_SUITE] Starting sandbox to run agent for problem {problem_name}")
+
+        sandbox_id = None
 
         def on_mount(temp_dir):
             # Create /sandbox/repo directory
@@ -164,16 +166,20 @@ class ProblemSuite(ABC):
         agent_runner_path = os.path.join(os.path.dirname(__file__), "AGENT_RUNNER.py")
         sandbox_id = sandbox_manager.create_sandbox(
             script_path=agent_runner_path,
-            input_data={"problem_statement": problem.get("problem_statement")},
+            input_data={
+                "run_id": run_id,
+                "problem_statement": problem.get("problem_statement")
+            },
             on_mount=on_mount,
-            on_finish=_on_finish
+            on_finish=_on_finish,
+            timeout=timeout
         )
 
         debug(f"[PROBLEM_SUITE] Started sandbox to run agent for problem {problem_name}")
 
 
 
-    def evaluate_solution_diff(self, sandbox_manager, problem_name, solution_diff, on_finish):
+    def evaluate_solution_diff(self, sandbox_manager, run_id, problem_name, solution_diff, on_finish, *, timeout=None):
         """
         Evaluate a solution diff for the given problem.
 
@@ -200,6 +206,8 @@ class ProblemSuite(ABC):
             raise ValueError(f"Problem {problem_name} not found")
 
         info(f"[PROBLEM_SUITE] Starting sandbox to evaluate solution diff for problem {problem_name}")
+
+        sandbox_id = None
 
         def on_mount(temp_dir):
             # Create /sandbox/repo directory
@@ -232,9 +240,13 @@ class ProblemSuite(ABC):
         # Create sandbox with test runner
         sandbox_id = sandbox_manager.create_sandbox(
             script_path=self.get_test_runner_path(),
-            input_data={"tests": problem.get("tests")},
+            input_data={
+                "run_id": run_id,
+                "tests": problem.get("tests")
+            },
             on_mount=on_mount,
-            on_finish=_on_finish
+            on_finish=_on_finish,
+            timeout=timeout
         )
 
         debug(f"[PROBLEM_SUITE] Started sandbox to evaluate solution diff for problem {problem_name}")
