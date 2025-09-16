@@ -18,7 +18,7 @@ chutes_client = OpenAI(
 
 
 
-app = FastAPI(title="Inference Proxy", description="Inference proxy server with embedding and inference endpoints, forwards whitelisted requests to Chutes and Targon")
+app = FastAPI(title="Inference Gateway", description="Inference gateway server with embedding and inference endpoints, forwards whitelisted requests to Chutes and Targon")
 
 
 
