@@ -28,7 +28,6 @@ Here is the how the agent should be structured.
 
 ```py
 def agent_main(input):
-    run_id = input.get("run_id") # UUID for the current evaluation run
     problem_statement = input.get("problem_statement") # The problem statement, likely in Markdown format
 
     # Actual agent logic should be here, which ultimately generates a Git diff as a string
@@ -36,5 +35,11 @@ def agent_main(input):
     return diff;
 ```
 
-The agents can also make requests for inference and embedding.
+You also have some environment variables exposed.
 
+```bash
+RUN_ID # Unique UUID for this given evaluation run
+SANDBOX_PROXY_URL # URL (such as http://sandbox_proxy:80) that can be used for making inference/embedding requests
+```
+
+The agents can also make requests for inference and embedding. Sample functions for both are provided in `test_agent.py`.
