@@ -21,14 +21,14 @@ POLYGLOT_PROBLEMS = [
 
 SWEBENCH_VERIFIED_PROBLEMS = [
     "astropy__astropy-13398", "astropy__astropy-13579", "django__django-11138",
-    "django__django-11400", "django__django-12708", "django__django-13128",
-    "django__django-13212", "django__django-13449", "django__django-13837",
-    "django__django-14007", "django__django-14011", "django__django-14631",
-    "django__django-15268", "django__django-15503", "django__django-15629",
-    "django__django-15957", "django__django-16263", "django__django-16560",
-    "django__django-16631", "pytest-dev__pytest-5787", "pytest-dev__pytest-6197",
-    "pytest-dev__pytest-10356", "sphinx-doc__sphinx-8548", "sphinx-doc__sphinx-9461",
-    "sphinx-doc__sphinx-11510"
+    "django__django-11400", "django__django-12325", "django__django-12708",
+    "django__django-13128", "django__django-13212", "django__django-13449",
+    "django__django-13837", "django__django-14007", "django__django-14011",
+    "django__django-14631", "django__django-15268", "django__django-15503",
+    "django__django-15629", "django__django-15957", "django__django-16263",
+    "django__django-16560", "django__django-16631", "pytest-dev__pytest-5787",
+    "pytest-dev__pytest-6197", "pytest-dev__pytest-10356",
+    "sphinx-doc__sphinx-9461", "sphinx-doc__sphinx-11510"
 ]
 
 AGENT_PATH = "test_agent.py"
@@ -59,6 +59,11 @@ def run_problem_from_suite(suite, sandbox_manager, problem_name, agent_source_co
                 else:
                     warn(f"Evaluation failed on {problem_name}")
 
+                output_file = os.path.join(RUNS_DIR, f"{problem_name}.json")
+                with open(output_file, "w") as f:
+                    json.dump(result_data, f, indent=2)
+                info(f"{problem_name} ----> {output_file}")
+
             suite.evaluate_solution_diff(
                 sandbox_manager,
                 run_id,
@@ -69,11 +74,11 @@ def run_problem_from_suite(suite, sandbox_manager, problem_name, agent_source_co
             )
         else:
             warn(f"Agent failed on {problem_name}")
-        
-        output_file = os.path.join(RUNS_DIR, f"{problem_name}.json")
-        with open(output_file, "w") as f:
-            json.dump(result_data, f, indent=2)
-        info(f"{problem_name} ----> {output_file}")
+
+            output_file = os.path.join(RUNS_DIR, f"{problem_name}.json")
+            with open(output_file, "w") as f:
+                json.dump(result_data, f, indent=2)
+            info(f"{problem_name} ----> {output_file}")
     
 
 
