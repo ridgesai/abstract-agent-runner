@@ -298,3 +298,44 @@ class SWEBenchVerifiedSuite(ProblemSuite):
             report = json.load(f)
 
         return report
+    
+
+
+    def prebuild_problem_images(self, sandbox_manager, problem_names):
+        test_specs = []
+
+        for problem_name in problem_names:
+            problem = self.get_problem(problem_name)
+            if not problem:
+                warn(f"[SWEBENCH] Problem {problem_name} not found")
+                continue
+
+            test_specs.append(make_test_spec(SWEbenchInstance(**problem.get("swebench_instance"))))
+
+        debug(f"[SWEBENCH] Prebuilding environment images for {len(test_specs)} problems")
+        start_time = time.time()
+        build_successful, build_failed = build_env_images(
+            client=sandbox_manager.docker,
+            dataset=test_specs, 
+            force_rebuild=False,
+            max_workers=4
+        )
+        elapsed_time = time.time() - start_time
+        if len(build_failed) > 0:
+            warn(f"[SWEBENCH] Failed to prebuild environment images for {len(build_failed)} of {len(test_specs)} problems")
+            raise RuntimeError(f"Failed to prebuild environment images for {len(build_failed)} of {len(test_specs)} problems")
+        debug(f"[SWEBENCH] Successfully prebuilt environment images for {len(test_specs)} problems in {elapsed_time:.1f} seconds")
+
+        debug(f"[SWEBENCH] Prebuilding instance images for {len(test_specs)} problems")
+        start_time = time.time()
+        build_successful, build_failed = build_instance_images(
+            client=sandbox_manager.docker,
+            dataset=test_specs, 
+            force_rebuild=False,
+            max_workers=4
+        )
+        elapsed_time = time.time() - start_time
+        if len(build_failed) > 0:
+            warn(f"[SWEBENCH] Failed to prebuild instance images for {len(build_failed)} of {len(test_specs)} problems")
+            raise RuntimeError(f"Failed to prebuild instance images for {len(build_failed)} of {len(test_specs)} problems")
+        debug(f"[SWEBENCH] Successfully prebuilt instance images for {len(test_specs)} problems in {elapsed_time:.1f} seconds")

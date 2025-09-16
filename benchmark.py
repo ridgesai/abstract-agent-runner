@@ -99,8 +99,14 @@ def main():
 
     sandbox_manager = SandboxManager()
 
+    swebench_verified_suite.prebuild_problem_images(sandbox_manager, SWEBENCH_VERIFIED_PROBLEMS)
+
+
+
     with open(AGENT_PATH, "r") as f:
         agent_source_code = f.read()
+
+
 
     for problem_name in POLYGLOT_PROBLEMS:
         run_problem_from_suite(polyglot_suite, sandbox_manager, problem_name, agent_source_code)
