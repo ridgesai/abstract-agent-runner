@@ -8,9 +8,37 @@ from utils.logger import debug, info, warn, error
 
 
 
-def clone_repo_at_commit(repo_path, commit_hash, target_dir):
+def clone_repo(repo_url, target_dir):
     """
-    Clone a repository at a specific commit into the target directory.
+    Clone a repository from a URL into the target directory.
+    
+    Args:
+        repo_url: URL of the repository to clone (e.g., https://github.com/owner/repo.git)
+        target_dir: Directory to clone the repository into
+        
+    Returns:
+        tuple: (success: bool, error_message: str or None)
+    """
+    
+    try:
+        debug(f"[GIT] Cloning repository from {repo_url} to {target_dir}")
+ 
+        result = subprocess.run(["git", "clone", repo_url, target_dir])
+        if result.returncode != 0:
+            return False, f"Failed to clone repository: {result.returncode}"
+        
+        debug(f"[GIT] Successfully cloned repository to {target_dir}")
+ 
+        return True, None
+        
+    except Exception as e:
+        return False, f"Failed to clone repository from {repo_url} to {target_dir}: {str(e)}"
+
+
+
+def clone_local_repo_at_commit(repo_path, commit_hash, target_dir):
+    """
+    Clone a local repository at a specific commit into the target directory.
     
     Args:
         repo_path: Path to the local repository 
@@ -98,13 +126,7 @@ def verify_commit_exists(repo_path, commit_hash):
         return False
     
     try:
-        result = subprocess.run(
-            ["git", "cat-file", "-e", commit_hash],
-            capture_output=True,
-            text=True,
-            cwd=repo_path
-        )
-        
+        result = subprocess.run(["git", "cat-file", "-e", commit_hash], capture_output=True, text=True, cwd=repo_path)
         return result.returncode == 0
         
     except Exception:

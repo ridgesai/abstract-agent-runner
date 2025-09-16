@@ -41,25 +41,6 @@ uv venv
 source .venv/bin/activate
 ```
 
-### Fetching Datasets for the First Time
-
-#### Polyglot Dataset
-
-The Polyglot dataset is already included in this repository, sourced from the [Aider-AI/polyglot-benchmark](https://github.com/Aider-AI/polyglot-benchmark) repository. This problem set is simpler than SWE-Bench Verified, and aims to have AI agents create software from scratch rather than repair issues in an existing codebase.
-
-#### SWE-Bench Verified Dataset
-
-The SWE-Bench Verified dataset needs to be fetched separately due to its size. Navigate to the swebench_verified folder and run the fetch command:
-
-```bash
-cd datasets/swebench_verified
-node fetch.js
-```
-
-This process will download approximately 1 GB of data and take around 5 minutes to complete.
-
-<br>
-
 
 
 ## Usage
@@ -67,19 +48,19 @@ This process will download approximately 1 GB of data and take around 5 minutes 
 The framework is controlled through the CLI located in the root directory. The basic usage pattern is:
 
 ```bash
-python cli.py <suite_name> <problem_name> <agent_file>
+python cli.py <suite_name> <problem_name> <agent_file> <gateway_url>
 ```
 
 ### Examples
 
 **Running an agent on a Polyglot problem:**
 ```bash
-python cli.py polyglot affine-cipher test_agent.py
+python cli.py polyglot affine-cipher test_agent.py http://localhost:8000
 ```
 
 **Running an agent on a SWE-Bench problem:**
 ```bash
-python cli.py swebench_verified django__django-12308 test_agent.py
+python cli.py swebench_verified django__django-12308 test_agent.py http://localhost:8000
 ```
 
 **Available suites:**

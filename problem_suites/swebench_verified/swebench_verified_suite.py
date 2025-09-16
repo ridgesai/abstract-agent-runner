@@ -10,9 +10,9 @@ from utils.diff import apply_diff
 from utils.logger import debug, info, warn, error
 from problem_suites.problem_suite import ProblemSuite
 from swebench.harness.constants import SWEbenchInstance
-from utils.git import clone_repo_at_commit, verify_commit_exists
 from swebench.harness.run_evaluation import make_test_spec, run_instance
 from swebench.harness.docker_build import build_env_images, build_instance_images
+from utils.git import clone_local_repo_at_commit, clone_repo, verify_commit_exists
 
 
 
@@ -47,27 +47,25 @@ class SWEBenchVerifiedSuite(ProblemSuite):
                 if repo:
                     unique_repos.add(repo)
             
-            debug(f"[SWEBENCH] Found {len(unique_repos)} unique repositories")
+            debug(f"[SWEBENCH] Finding {len(unique_repos)} unique repositories")
             
             # Check that all repositories exist in the repos/ directory
             repos_dir = os.path.join(problem_suite_path, "repos")
             if not os.path.exists(repos_dir):
-                error(f"[SWEBENCH] repos/ directory not found at: {repos_dir}")
-                raise FileNotFoundError(f"repos/ directory not found at: {repos_dir}")
+                os.makedirs(repos_dir, exist_ok=True)
             
-            missing_repos = []
             for repo in unique_repos:
                 # Convert repository format from "owner/name" to directory name format "owner_name"
                 repo_dir_name = repo.replace("/", "_")
                 repo_path = os.path.join(repos_dir, repo_dir_name)
+                
                 if not os.path.exists(repo_path):
-                    missing_repos.append(repo)
+                    repo_url = f"https://github.com/{repo}.git"
+                    success, error_msg = clone_repo(repo_url, repo_path)
+                    if not success:
+                        raise RuntimeError(f"Failed to clone repository {repo}: {error_msg}")
             
-            if missing_repos:
-                error(f"[SWEBENCH] Missing repositories in repos/ directory: {missing_repos}")
-                raise FileNotFoundError(f"Missing repositories in repos/ directory: {missing_repos}")
-            
-            debug(f"[SWEBENCH] All {len(unique_repos)} repositories found in repos/ directory")
+            debug(f"[SWEBENCH] Found {len(unique_repos)} unique repositories")
             
             # Process each problem
             for problem in problems_list:
@@ -126,7 +124,7 @@ class SWEBenchVerifiedSuite(ProblemSuite):
         
         # Clone the appropriate repository at the specific commit that the problem requires
         debug(f"[SWEBENCH] Cloning {repo} at commit {base_commit} to {dir} for {problem_name}")
-        success, error_msg = clone_repo_at_commit(repo_path, base_commit, dir)
+        success, error_msg = clone_local_repo_at_commit(repo_path, base_commit, dir)
         if not success:
             warn(f"[SWEBENCH] Failed to clone repository for {problem_name}: {error_msg}")
             raise RuntimeError(f"Failed to clone repository for {problem_name}: {error_msg}")
