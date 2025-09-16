@@ -3,6 +3,7 @@ import sys
 import json
 import time
 import uuid
+import argparse
 
 from sandbox.sandbox_manager import SandboxManager
 from problem_suites.polyglot.polyglot_suite import PolyglotSuite
@@ -93,7 +94,7 @@ def run_problem_from_suite(suite, sandbox_manager, problem_name, agent_source_co
     )
 
 
-def main():
+def run_benchmark(gateway_url):
     start_time = time.time()
 
 
@@ -101,7 +102,7 @@ def main():
     polyglot_suite = PolyglotSuite("./datasets/polyglot")
     swebench_verified_suite = SWEBenchVerifiedSuite("./datasets/swebench_verified")
 
-    sandbox_manager = SandboxManager()
+    sandbox_manager = SandboxManager(gateway_url)
 
     swebench_verified_suite.prebuild_problem_images(sandbox_manager, SWEBENCH_VERIFIED_PROBLEMS)
 
@@ -127,6 +128,25 @@ def main():
 
     elapsed_time = time.time() - start_time
     info(f"Time: {elapsed_time:.1f} seconds")
+
+    return 0
+
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Benchmark runner for problem suite evaluations",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""Examples:
+  python benchmark.py http://localhost:8000"""
+    )
+    
+    parser.add_argument("gateway_url", help="URL for the gateway")
+    
+    args = parser.parse_args()
+    
+    return run_benchmark(args.gateway_url)
+
 
 
 if __name__ == "__main__":

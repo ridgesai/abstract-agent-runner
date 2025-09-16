@@ -12,7 +12,8 @@ from utils.logger import info, warn, error, debug, enable_verbose
 from problem_suites.swebench_verified.swebench_verified_suite import SWEBenchVerifiedSuite
 
 
-def run_agent_on_problem(suite_name, problem_name, agent_file, *, log_docker_to_stdout=False, include_solution=False, timeout=300):
+
+def run_agent_on_problem(suite_name, problem_name, agent_file, gateway_url, *, log_docker_to_stdout=False, include_solution=False, timeout=300):
     suite_configs = {
         "polyglot": {
             "class": PolyglotSuite,
@@ -40,7 +41,7 @@ def run_agent_on_problem(suite_name, problem_name, agent_file, *, log_docker_to_
     
 
 
-    sandbox_manager = SandboxManager(log_docker_to_stdout=log_docker_to_stdout)
+    sandbox_manager = SandboxManager(gateway_url, log_docker_to_stdout=log_docker_to_stdout)
 
 
 
@@ -144,14 +145,15 @@ def main():
         description="Agent runner CLI for problem suite benchmarks",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""Examples:
-  python cli.py polyglot affine-cipher test_agent.py
-  python cli.py swebench_verified django__django-12308 test_agent.py
-  python cli.py polyglot affine-cipher test_agent.py --include-solution --log-docker-to-stdout --verbose"""
+  python cli.py polyglot affine-cipher test_agent.py http://localhost:8000
+  python cli.py swebench_verified django__django-12308 test_agent.py http://localhost:8000
+  python cli.py polyglot affine-cipher test_agent.py http://localhost:8000 --include-solution --log-docker-to-stdout --verbose"""
     )
     
     parser.add_argument("suite_name", help="Problem suite name (polyglot, swebench_verified)")
     parser.add_argument("problem_name", help="Name of the specific problem to run")
     parser.add_argument("agent_file", help="Path to the agent Python file")
+    parser.add_argument("gateway_url", help="URL for the gateway")
     
     parser.add_argument("--log-docker-to-stdout", action="store_true", 
                        help="Print Docker container logs to stdout in real-time")
@@ -171,6 +173,7 @@ def main():
         args.suite_name, 
         args.problem_name, 
         args.agent_file,
+        args.gateway_url,
         log_docker_to_stdout=args.log_docker_to_stdout,
         include_solution=args.include_solution,
         timeout=args.timeout
