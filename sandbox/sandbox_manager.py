@@ -5,11 +5,14 @@ import json
 import time
 import docker
 import shutil
+import requests
 import threading
 import traceback
 import subprocess
+
 from enum import Enum
 
+from utils.docker import build_docker_image
 from utils.logger import debug, info, warn, error
 from utils.temp import create_temp_dir, cleanup_temp_dir
 
@@ -29,12 +32,21 @@ class SandboxNetworkMode(Enum):
 
 
 
+SANDBOX_PROXY_HOST = "sandbox_proxy"
+SANDBOX_PROXY_PORT = 80
+
+
+
 class SandboxManager:
     """Manages Docker sandbox creation and execution."""
 
 
 
-    def __init__(self, *, log_docker_to_stdout=False):
+    def __init__(self, gateway_url, *, log_docker_to_stdout=False):
+        self._check_gateway(gateway_url)
+
+
+
         try:
             self.docker = docker.from_env()
         except Exception as e:
@@ -55,37 +67,27 @@ class SandboxManager:
 
 
 
-        self._build_sandbox_image()
+        build_docker_image(os.path.dirname(__file__), "sandbox-image")
         self.sandboxes = {}
         
         self._create_sandbox_network()
 
         self.proxy_container = None
         self.proxy_temp_dir = None
-        self._create_sandbox_proxy()
+        build_docker_image(os.path.dirname(__file__) + "/proxy", "sandbox-proxy-image")
+        self._create_sandbox_proxy(gateway_url)
 
         self.log_docker_to_stdout = log_docker_to_stdout
 
         self._start_watchdog()
 
-    def _build_sandbox_image(self):
-        sandbox_image_tag = "sandbox-image"
-        sandbox_dir = os.path.dirname(__file__)
-        
-        info(f"[SANDBOX] Building Docker image: {sandbox_image_tag}")
-        
-        # Build new image using docker build command
+    def _check_gateway(self, gateway_url):
+        info(f"[SANDBOX] Checking gateway URL: {gateway_url}")
         try:
-            result = subprocess.run(["docker", "build", "-t", sandbox_image_tag, sandbox_dir], text=True)
-            
-            if result.returncode == 0:
-                info(f"[SANDBOX] Successfully built Docker image: {sandbox_image_tag}")
-            else:
-                raise Exception(f"Docker build failed with exit code {result.returncode}")
-                
+            requests.get(gateway_url)
         except Exception as e:
-            error(f"[SANDBOX] Failed to build Docker image: {e}")
-            raise
+            error(f"[SANDBOX] Gateway URL {gateway_url} is invalid: {e}")
+        info(f"[SANDBOX] Gateway URL {gateway_url} is valid")
 
     def __del__(self):
         try:
@@ -131,7 +133,7 @@ class SandboxManager:
 
 
 
-    def create_sandbox(self, *, script_path, input_data, on_mount, on_finish, network_mode=SandboxNetworkMode.SANDBOX, timeout=None):
+    def create_sandbox(self, *, script_path, input_data, env_vars, on_mount, on_finish, network_mode=SandboxNetworkMode.SANDBOX, timeout=None):
         """
         Create a Docker sandbox that runs the given Python script and provides it with the given input data.
         
@@ -150,6 +152,9 @@ class SandboxManager:
                     }
 
             input_data: Dictionary to write as input.json in the sandbox
+
+            env_vars: Dictionary of environment variables to set in the sandbox
+                SANDBOX_PROXY_URL is set appropriately by default
 
             on_mount(temp_dir): Callback called after temp dir creation, you can add files to the /sandbox directory here
 
@@ -212,6 +217,7 @@ class SandboxManager:
         self.sandboxes[sandbox_id] = {
             "temp_dir": temp_dir,
             "script_name": script_name,
+            "env_vars": env_vars,
             "on_finish": on_finish,
             "network_mode": network_mode,
             "timeout": timeout,
@@ -272,7 +278,9 @@ class SandboxManager:
                     temp_dir: {"bind": "/sandbox", "mode": "rw"}
                 },
                 "environment": {
-                    "PYTHONUNBUFFERED": "1"
+                    "PYTHONUNBUFFERED": "1",
+                    "SANDBOX_PROXY_URL": f"http://{SANDBOX_PROXY_HOST}:{SANDBOX_PROXY_PORT}",
+                    **sandbox["env_vars"]
                 },
                 "remove": False,
                 "detach": True
@@ -438,38 +446,28 @@ class SandboxManager:
 
 
 
-    def _create_sandbox_proxy(self):
+    def _create_sandbox_proxy(self, gateway_url):
         """
         Spawn the sandbox proxy server.
         
-        This is a special sandbox that runs a proxy server.
+        This is a special sandbox that runs a proxy server (nginx).
         This is the only sandbox that can access the internet.
         
         The other sandboxes cannot directly access the internet.
         They can, however, access it through this proxy server, which only allows specific requests.
+        The requests sent to this proxy are forwarded to the gateway (specified when creating the SandboxManager).
         """
-
-        # Create temporary directory on host
-        self.sandbox_proxy_temp_dir = create_temp_dir()
-        debug(f"[SANDBOX] Created sandbox proxy temp directory: {self.sandbox_proxy_temp_dir}")
-        
-        # Copy SANDBOX_PROXY.py to temp directory
-        shutil.copy2(os.path.join(os.path.dirname(__file__), "SANDBOX_PROXY.py"), os.path.join(self.sandbox_proxy_temp_dir, "SANDBOX_PROXY.py"))
-        
+  
         info(f"[SANDBOX] Running sandbox proxy")
         
         # Run proxy in Docker container on both networks
         self.proxy_container = self.docker.containers.run(
-            "sandbox-image",
-            "python /sandbox_proxy/SANDBOX_PROXY.py",
-            name="sandbox_proxy",
-            volumes={
-                self.sandbox_proxy_temp_dir: {"bind": "/sandbox_proxy", "mode": "ro"}
-            },
+            "sandbox-proxy-image",
+            name=SANDBOX_PROXY_HOST,
             network=SANDBOX_NETWORK_NAME,
             environment={
-                "PYTHONUNBUFFERED": "1",
-                "FORWARD_TO": "http://192.168.5.94:8000" # TODO
+                "GATEWAY_URL": gateway_url,
+                "GATEWAY_HOST": gateway_url.split("://")[1].split(":")[0]
             },
             remove=False,
             detach=True

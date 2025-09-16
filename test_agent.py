@@ -7,7 +7,12 @@ import subprocess
 
 
 RUN_ID = os.getenv("RUN_ID")
+if not RUN_ID:
+    print("[AGENT] WARNING: RUN_ID is not set")
+
 SANDBOX_PROXY_URL = os.getenv("SANDBOX_PROXY_URL")
+if not SANDBOX_PROXY_URL:
+    print("[AGENT] WARNING: SANDBOX_PROXY_URL is not set")
 
 
 
