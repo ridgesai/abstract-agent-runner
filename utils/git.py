@@ -125,23 +125,19 @@ def init_repo_with_initial_commit(directory, commit_message="Initial commit"):
     """
 
     try:
-        # Change to the target directory
-        original_cwd = os.getcwd()
-        os.chdir(directory)
-        
         # Initialize git repository
         debug(f"[GIT] Initializing git repository in {directory}")
-        subprocess.run(['git', 'init'], capture_output=True, text=True, check=True)
+        subprocess.run(['git', 'init'], capture_output=True, text=True, check=True, cwd=directory)
         debug(f"[GIT] Initialized git repository in {directory}")
 
         # Add all files
         debug(f"[GIT] Adding all files in {directory}")
-        subprocess.run(['git', 'add', '.'], capture_output=True, text=True, check=True)
+        subprocess.run(['git', 'add', '.'], capture_output=True, text=True, check=True, cwd=directory)
         debug(f"[GIT] Added all files in {directory}")
         
         # Make initial commit
         debug(f"[GIT] Making initial commit: {commit_message}")
-        subprocess.run(['git', 'commit', '-m', commit_message], capture_output=True, text=True, check=True)
+        subprocess.run(['git', 'commit', '-m', commit_message], capture_output=True, text=True, check=True, cwd=directory)
         debug(f"[GIT] Made initial commit: {commit_message}")
         
         return True
@@ -157,7 +153,3 @@ def init_repo_with_initial_commit(directory, commit_message="Initial commit"):
         warn(f"[GIT] Failed to initialize git repository: {e}")
 
         return False
-    
-    finally:
-        # Always return to original directory
-        os.chdir(original_cwd)
