@@ -1,13 +1,20 @@
-import requests
-import subprocess
+import os
 import json
 import uuid
+import requests
+import subprocess
+
+
+
+RUN_ID = os.getenv("RUN_ID")
+SANDBOX_PROXY_URL = os.getenv("SANDBOX_PROXY_URL")
+
 
 
 def inference(model, temperature, messages):
     try:
         payload = {
-            "run_id": str(uuid.uuid4()),
+            "run_id": RUN_ID,
             "model": model,
             "temperature": temperature,
             "messages": messages
@@ -15,7 +22,7 @@ def inference(model, temperature, messages):
         
         print(f"[AGENT] inference(): Sending inference request for model {model} (temperature {temperature}) with {len(messages)} messages")
         response = requests.post(
-            "http://sandbox_proxy:8080/api/inference",
+            f"{SANDBOX_PROXY_URL}/api/inference",
             headers={"Content-Type": "application/json"},
             data=json.dumps(payload)
         )
@@ -37,13 +44,13 @@ def inference(model, temperature, messages):
 def embedding(input):
     try:
         payload = {
-            "run_id": str(uuid.uuid4()),
+            "run_id": RUN_ID,
             "input": input
         }
         
         print(f"[AGENT] embedding(): Sending embedding request...")
         response = requests.post(
-            "http://sandbox_proxy:8080/api/embedding",
+            f"{SANDBOX_PROXY_URL}/api/embedding",
             headers={"Content-Type": "application/json"},
             data=json.dumps(payload)
         )
