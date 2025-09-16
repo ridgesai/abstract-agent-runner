@@ -94,6 +94,10 @@ def run_problem_from_suite(suite, sandbox_manager, problem_name, agent_source_co
 
 
 def main():
+    start_time = time.time()
+
+
+
     polyglot_suite = PolyglotSuite("./datasets/polyglot")
     swebench_verified_suite = SWEBenchVerifiedSuite("./datasets/swebench_verified")
 
@@ -118,6 +122,11 @@ def main():
 
     while sandbox_manager.get_num_sandboxes() > 0:
         time.sleep(1)
+
+
+
+    elapsed_time = time.time() - start_time
+    info(f"Time: {elapsed_time:.1f} seconds")
 
 
 if __name__ == "__main__":

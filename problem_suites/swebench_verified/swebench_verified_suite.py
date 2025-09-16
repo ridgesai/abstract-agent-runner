@@ -159,6 +159,7 @@ class SWEBenchVerifiedSuite(ProblemSuite):
 
 
     def evaluate_solution_diff(self, sandbox_manager, run_id, problem_name, solution_diff, on_finish, *, timeout=None):
+        # TODO: thread
         try:
             report = self.run_swebench_evaluation(sandbox_manager, run_id, problem_name, solution_diff, timeout=timeout)
 
