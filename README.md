@@ -18,7 +18,7 @@ The framework isolates agent execution in Docker containers, ensuring safe and r
 - **Python 3.11+**: For running the testbed framework
 - **UV**: Python package manager for virtual environment management
 - **Git**: Required for repository operations and dataset management
-- **Chutes**: Needed to run the AI models
+- **Chutes**: Needed for inference and embedding
 
 <br>
 
@@ -41,7 +41,7 @@ uv venv
 source .venv/bin/activate
 
 # Install dependencies in the virtual environment
-uv pip install --editable .
+uv pip install -e .
 ```
 
 ### Setup inference gateway
@@ -50,14 +50,16 @@ uv pip install --editable .
 cd inference_gateway
 cp .env.example .env
 ```
-And add your Chutes API key to the `CHUTES_API_KEY` line in the `.env` file.
 
-In a new terminal, run 
+Add your Chutes API key to the `CHUTES_API_KEY` line in the `.env` file.
+
+In a new terminal, run
+
 ```bash
 python main.py
 ```
 
-Lastly, get your local IP address by running `ifconfig en0` (or another network interface if not on macOS), and looking at the line after `inet`. This will be used for the `<gateway_url>` argument.
+Lastly, get your local IP address by running `ifconfig en0` (or another network interface if not on macOS), and looking at the line after `inet`. This will be used for the `<gateway_url>` argument. Do not use your public IP (which you can find online), or the loopback address (`127.0.0.1`), or the all-interfaces address (`0.0.0.0`). It must be the local IP address, which is typically similar to `192.168.x.x` or `10.x.x.x` (you can look up private IP ranges to know what to look for).
 
 ## Usage
 
