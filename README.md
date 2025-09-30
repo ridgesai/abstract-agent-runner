@@ -17,8 +17,8 @@ The framework isolates agent execution in Docker containers, ensuring safe and r
 - **Docker**: Required for creating isolated sandbox environments
 - **Python 3.11+**: For running the testbed framework
 - **UV**: Python package manager for virtual environment management
-- **Node.js**: For fetching SWE-Bench datasets
 - **Git**: Required for repository operations and dataset management
+- **Chutes**: Needed to run the AI models
 
 <br>
 
@@ -39,9 +39,25 @@ uv venv
 
 # Activate the virtual environment
 source .venv/bin/activate
+
+# Install dependencies in the virtual environment
+uv pip install --editable .
 ```
 
+### Setup inference gateway
 
+```bash
+cd inference_gateway
+cp .env.example .env
+```
+And add your Chutes API key to the `CHUTES_API_KEY` line in the `.env` file.
+
+In a new terminal, run 
+```bash
+python main.py
+```
+
+Lastly, get your local IP address by running `ifconfig en0` (or another network interface if not on macOS), and looking at the line after `inet`. This will be used for the `<gateway_url>` argument.
 
 ## Usage
 
@@ -55,12 +71,12 @@ python cli.py <suite_name> <problem_name> <agent_file> <gateway_url>
 
 **Running an agent on a Polyglot problem:**
 ```bash
-python cli.py polyglot affine-cipher test_agent.py http://localhost:8000
+python cli.py polyglot affine-cipher test_agent.py http://<IP_ADDRESS>:8000
 ```
 
 **Running an agent on a SWE-Bench problem:**
 ```bash
-python cli.py swebench_verified django__django-12308 test_agent.py http://localhost:8000
+python cli.py swebench_verified django__django-12308 test_agent.py http://<IP_ADDRESS>:8000
 ```
 
 **Available suites:**
