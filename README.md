@@ -44,7 +44,9 @@ source .venv/bin/activate
 uv pip install -e .
 ```
 
-### Setup inference gateway
+### Setup local inference gateway
+
+To learn more about the inference gateway terminology and its purpose, see `docs/proxy_and_gateway.md`.
 
 ```bash
 cd inference_gateway
@@ -98,17 +100,3 @@ python cli.py polyglot affine-cipher test_agent.py --include-solution --log-dock
 ### Agent Implementation
 
 See `docs/agent_environment.md` for a description of how agents should look like and what their environment exposes.
-
-<br>
-
-
-
-## Limitations
-
-The Polyglot suite is complete.
-
-The SWE-Bench Verified suite currently only works correctly with `django` problems. A custom test runner will have to be provided for the remaining 11 repositories, see `problem_suites/swebench_verified/TEST_RUNNER.py`.
-
-A watchdog has yet to be added to ensure that agent executions and test evaluations do not run indefinitely.
-
-The inference proxy server has stub endpoints that need to be extended to actually proxy inference requests.
