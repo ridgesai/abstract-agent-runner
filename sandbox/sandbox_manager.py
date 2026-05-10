@@ -11,6 +11,7 @@ import traceback
 import subprocess
 
 from enum import Enum
+from urllib.parse import urlsplit, urlunsplit
 
 from utils.docker import build_docker_image
 from utils.logger import debug, info, warn, error
@@ -81,10 +82,18 @@ class SandboxManager:
 
         self._start_watchdog()
 
+    @staticmethod
+    def _gateway_healthcheck_url(gateway_url):
+        parsed = urlsplit(gateway_url)
+        if parsed.path and parsed.path != "/":
+            return gateway_url
+        return urlunsplit((parsed.scheme, parsed.netloc, "/health", parsed.query, parsed.fragment))
+
     def _check_gateway(self, gateway_url):
-        info(f"[SANDBOX] Checking gateway URL: {gateway_url}")
+        healthcheck_url = self._gateway_healthcheck_url(gateway_url)
+        info(f"[SANDBOX] Checking gateway URL: {healthcheck_url}")
         try:
-            requests.get(gateway_url)
+            requests.get(healthcheck_url)
         except Exception as e:
             error(f"[SANDBOX] Gateway URL {gateway_url} is invalid: {e}")
         info(f"[SANDBOX] Gateway URL {gateway_url} is valid")
