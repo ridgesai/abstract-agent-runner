@@ -22,6 +22,12 @@ app = FastAPI(title="Inference Gateway", description="Inference gateway server w
 
 
 
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
+
 @app.post("/api/inference")
 async def inference(request: InferenceRequest):
     try:
